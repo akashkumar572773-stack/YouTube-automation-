@@ -10,13 +10,9 @@
     body {
       font-family: Arial, sans-serif;
       max-width: 500px;
-      margin: 50px auto;
+      margin: 40px auto;
       padding: 20px;
       text-align: center;
-    }
-
-    h1 {
-      margin-bottom: 10px;
     }
 
     .box {
@@ -24,6 +20,21 @@
       border-radius: 12px;
       padding: 25px;
       margin-top: 25px;
+    }
+
+    input, textarea, select {
+      width: 90%;
+      padding: 12px;
+      margin-top: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      height: 100px;
+      resize: vertical;
     }
 
     button {
@@ -35,21 +46,24 @@
       margin-top: 15px;
     }
 
+    #uploadButton {
+      display: none;
+    }
+
     #status {
       margin-top: 20px;
       font-weight: bold;
     }
   </style>
 
-  <!-- Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
+  <script src="https://accounts.google.com/gsi/client"
+          async defer></script>
 </head>
 
 <body>
 
   <h1>YouTube Automation</h1>
-  <p>Connect your YouTube channel</p>
+  <p>Upload your video to YouTube</p>
 
   <div class="box">
 
@@ -57,6 +71,36 @@
 
     <button onclick="connectYouTube()">
       Connect YouTube
+    </button>
+
+    <br>
+
+    <input
+      type="file"
+      id="videoFile"
+      accept="video/*"
+    >
+
+    <input
+      type="text"
+      id="title"
+      placeholder="Video title"
+    >
+
+    <textarea
+      id="description"
+      placeholder="Video description"
+    ></textarea>
+
+    <select id="privacy">
+      <option value="private">Private</option>
+      <option value="unlisted">Unlisted</option>
+    </select>
+
+    <br>
+
+    <button id="uploadButton" onclick="uploadVideo()">
+      Upload to YouTube
     </button>
 
     <p id="status">Not connected</p>
@@ -94,11 +138,13 @@
           document.getElementById("status").textContent =
             "YouTube connected successfully!";
 
-          console.log("YouTube connected.");
+          document.getElementById("uploadButton").style.display =
+            "inline-block";
         }
       });
 
     };
+
 
     function connectYouTube() {
 
@@ -114,6 +160,114 @@
       tokenClient.requestAccessToken({
         prompt: "consent"
       });
+
+    }
+
+
+    async function uploadVideo() {
+
+      if (!accessToken) {
+        alert("Please connect YouTube first.");
+        return;
+      }
+
+      const file =
+        document.getElementById("videoFile").files[0];
+
+      const title =
+        document.getElementById("title").value.trim();
+
+      const description =
+        document.getElementById("description").value.trim();
+
+      const privacy =
+        document.getElementById("privacy").value;
+
+
+      if (!file) {
+        alert("Please select a video.");
+        return;
+      }
+
+      if (!title) {
+        alert("Please enter a video title.");
+        return;
+      }
+
+
+      document.getElementById("status").textContent =
+        "Uploading video... Please wait.";
+
+
+      const metadata = {
+        snippet: {
+          title: title,
+          description: description,
+          categoryId: "22"
+        },
+
+        status: {
+          privacyStatus: privacy
+        }
+      };
+
+
+      const formData = new FormData();
+
+      formData.append(
+        "metadata",
+        new Blob(
+          [JSON.stringify(metadata)],
+          { type: "application/json" }
+        )
+      );
+
+      formData.append("file", file);
+
+
+      try {
+
+        const response = await fetch(
+          "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status",
+          {
+            method: "POST",
+
+            headers: {
+              "Authorization": "Bearer " + accessToken
+            },
+
+            body: formData
+          }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+          console.log(data);
+
+          document.getElementById("status").textContent =
+            "Upload failed.";
+
+          return;
+        }
+
+
+        document.getElementById("status").innerHTML =
+          "🎉 Video uploaded successfully!<br>" +
+          "Video ID: " + data.id;
+
+
+      } catch (error) {
+
+        console.log(error);
+
+        document.getElementById("status").textContent =
+          "Upload error. Check your internet connection.";
+
+      }
 
     }
 
