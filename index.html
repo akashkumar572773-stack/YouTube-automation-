@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>YouTube Automation</title>
 
   <style>
@@ -34,45 +35,88 @@
       margin-top: 15px;
     }
 
-    #videoFile {
+    #status {
       margin-top: 20px;
+      font-weight: bold;
     }
   </style>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 </head>
 
 <body>
 
   <h1>YouTube Automation</h1>
-  <p>Upload your video to YouTube</p>
+  <p>Connect your YouTube channel</p>
 
   <div class="box">
-    <h2>Video Upload</h2>
 
-    <input type="file" id="videoFile" accept="video/*">
-
-    <br>
-
-    <input
-      type="text"
-      id="title"
-      placeholder="Video title"
-      style="padding:10px; width:90%; margin-top:15px;"
-    >
-
-    <br>
+    <h2>YouTube Connection</h2>
 
     <button onclick="connectYouTube()">
       Connect YouTube
     </button>
 
     <p id="status">Not connected</p>
+
   </div>
 
   <script>
+
+    const CLIENT_ID =
+      "267300896744-3lsm5m5f1aivm228hr6bvr0tihq22kg0.apps.googleusercontent.com";
+
+    const SCOPES =
+      "https://www.googleapis.com/auth/youtube.upload";
+
+    let tokenClient;
+    let accessToken = null;
+
+    window.onload = function () {
+
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+
+        callback: function (response) {
+
+          if (response.error !== undefined) {
+            document.getElementById("status").textContent =
+              "Connection failed.";
+            console.log(response);
+            return;
+          }
+
+          accessToken = response.access_token;
+
+          document.getElementById("status").textContent =
+            "YouTube connected successfully!";
+
+          console.log("YouTube connected.");
+        }
+      });
+
+    };
+
     function connectYouTube() {
+
+      if (!tokenClient) {
+        document.getElementById("status").textContent =
+          "Google is loading. Please try again.";
+        return;
+      }
+
       document.getElementById("status").textContent =
-        "YouTube connection will be added next.";
+        "Connecting to Google...";
+
+      tokenClient.requestAccessToken({
+        prompt: "consent"
+      });
+
     }
+
   </script>
 
 </body>
