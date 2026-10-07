@@ -164,25 +164,18 @@
     }
 
 
-    async function uploadVideo() {
+        async function uploadVideo() {
 
       if (!accessToken) {
         alert("Please connect YouTube first.");
         return;
       }
 
-      const file =
-        document.getElementById("videoFile").files[0];
-
-      const title =
-        document.getElementById("title").value.trim();
-
-      const description =
-        document.getElementById("description").value.trim();
-
-      const privacy =
-        document.getElementById("privacy").value;
-
+      const file = document.getElementById("videoFile").files[0];
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const privacy = document.getElementById("privacy").value;
+      const status = document.getElementById("status");
 
       if (!file) {
         alert("Please select a video.");
@@ -194,10 +187,7 @@
         return;
       }
 
-
-      document.getElementById("status").textContent =
-        "Uploading video... Please wait.";
-
+      status.textContent = "Starting upload...";
 
       const metadata = {
         snippet: {
@@ -205,70 +195,132 @@
           description: description,
           categoryId: "22"
         },
-
         status: {
           privacyStatus: privacy
         }
       };
 
-
-      const formData = new FormData();
-
-      formData.append(
-        "metadata",
-        new Blob(
-          [JSON.stringify(metadata)],
-          { type: "application/json" }
-        )
-      );
-
-      formData.append("file", file);
-
-
       try {
 
-        const response = await fetch(
-          "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status",
+        // Start resumable upload session
+        const startResponse = await fetch(
+          "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
           {
             method: "POST",
 
             headers: {
-              "Authorization": "Bearer " + accessToken
+              "Authorization": "Bearer " + accessToken,
+              "Content-Type": "application/json; charset=UTF-8",
+              "X-Upload-Content-Length": file.size,
+              "X-Upload-Content-Type": file.type || "video/*"
             },
 
-            body: formData
+            body: JSON.stringify(metadata)
           }
         );
 
-
-        const data = await response.json();
-
-
-        if (!response.ok) {
-
-          console.log(data);
-
-          document.getElementById("status").textContent =
-            "Upload failed.";
-
+        if (!startResponse.ok) {
+          const errorText = await startResponse.text();
+          console.log(errorText);
+          status.textContent = "Could not start upload.";
           return;
         }
 
+        const uploadUrl = startResponse.headers.get("Location");
 
-        document.getElementById("status").innerHTML =
-          "🎉 Video uploaded successfully!<br>" +
-          "Video ID: " + data.id;
+        if (!uploadUrl) {
+          status.textContent = "Upload URL was not received.";
+          return;
+        }
 
+        // Upload in 5 MB chunks
+        const chunkSize = 5 * 1024 * 1024;
+        let start = 0;
+
+        while (start < file.size) {
+
+          const end = Math.min(
+            start + chunkSize,
+            file.size
+          ) - 1;
+
+          const chunk = file.slice(start, end + 1);
+
+          status.textContent =
+            "Uploading video... " +
+            Math.floor((start / file.size) * 100) +
+            "%";
+
+          const uploadResponse = await fetch(
+            uploadUrl,
+            {
+              method: "PUT",
+
+              headers: {
+                "Authorization": "Bearer " + accessToken,
+                "Content-Length": chunk.size,
+                "Content-Type": file.type || "video/*",
+                "Content-Range":
+                  "bytes " +
+                  start +
+                  "-" +
+                  end +
+                  "/" +
+                  file.size
+              },
+
+              body: chunk
+            }
+          );
+
+          if (
+            uploadResponse.status === 200 ||
+            uploadResponse.status === 201
+          ) {
+
+            const data = await uploadResponse.json();
+
+            status.innerHTML =
+              "🎉 Video uploaded successfully!<br>" +
+              "Video ID: " + data.id;
+
+            return;
+          }
+
+          if (uploadResponse.status === 308) {
+
+            const range =
+              uploadResponse.headers.get("Range");
+
+            if (range) {
+              const lastByte =
+                parseInt(range.split("-")[1], 10);
+
+              start = lastByte + 1;
+            } else {
+              start = end + 1;
+            }
+
+            continue;
+          }
+
+          const errorText = await uploadResponse.text();
+          console.log(errorText);
+
+          status.textContent =
+            "Upload failed: " +
+            uploadResponse.status;
+
+          return;
+        }
 
       } catch (error) {
 
         console.log(error);
 
-        document.getElementById("status").textContent =
-          "Upload error. Check your internet connection.";
-
+        status.textContent =
+          "Upload interrupted. Please try again.";
       }
-
     }
 
   </script>
