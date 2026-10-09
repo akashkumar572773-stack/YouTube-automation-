@@ -372,7 +372,30 @@
       }
     }
 
-  </script>
+function generateScript() {
+  const topic = document.getElementById("scriptTopic").value.trim();
+  const language = document.getElementById("scriptLanguage").value;
+  const length = document.getElementById("scriptLength").value;
+
+  const output = document.getElementById("scriptOutput");
+  const status = document.getElementById("scriptStatus");
+
+  if (!topic) {
+    alert("Please enter a video topic.");
+    return;
+  }
+
+  status.textContent =
+    "AI script generation will be connected next.";
+
+  output.value =
+    "Topic: " + topic + "\n\n" +
+    "Language: " + language + "\n" +
+    "Length: " + length + "\n\n" +
+    "AI Script Generator UI is ready.";
+}
+
+</script>
 
 </body>
 </html>
