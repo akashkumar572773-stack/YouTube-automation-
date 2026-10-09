@@ -105,9 +105,46 @@
 
     <p id="status">Not connected</p>
 
-  </div>
+</div>
 
-  <script>
+<div class="box">
+  <h2>AI Script Generator</h2>
+
+  <input
+    type="text"
+    id="scriptTopic"
+    placeholder="Enter video topic"
+  >
+
+  <select id="scriptLanguage">
+    <option value="English">English</option>
+    <option value="Hindi">Hindi</option>
+    <option value="Hinglish">Hinglish</option>
+  </select>
+
+  <select id="scriptLength">
+    <option value="30 seconds">30 seconds</option>
+    <option value="60 seconds">60 seconds</option>
+    <option value="2 minutes">2 minutes</option>
+    <option value="5 minutes">5 minutes</option>
+  </select>
+
+  <br>
+
+  <button onclick="generateScript()">
+    Generate Script
+  </button>
+
+  <textarea
+    id="scriptOutput"
+    placeholder="Your script will appear here..."
+    readonly
+  ></textarea>
+
+  <p id="scriptStatus"></p>
+</div>
+
+<script>
 
     const CLIENT_ID =
       "267300896744-3lsm5m5f1aivm228hr6bvr0tihq22kg0.apps.googleusercontent.com";
