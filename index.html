@@ -385,14 +385,46 @@ function generateScript() {
     return;
   }
 
-  status.textContent =
-    "AI script generation will be connected next.";
+  status.textContent = "Generating AI script...";
+  output.value = "";
 
-  output.value =
-    "Topic: " + topic + "\n\n" +
-    "Language: " + language + "\n" +
-    "Length: " + length + "\n\n" +
-    "AI Script Generator UI is ready.";
+  const callbackName =
+    "aiScriptCallback_" + Date.now();
+
+  const backendUrl =
+    "https://script.google.com/macros/s/AKfycbzH-Z9SvwP_OxTM8sYIiAk0RWG0c4la8jIS3MhdVh17XUR88ZOq7RhNHkqLErQByvTs7g/exec";
+
+  const script = document.createElement("script");
+
+  window[callbackName] = function(data) {
+    if (data.success) {
+      output.value = data.script;
+      status.textContent = "Script generated successfully!";
+    } else {
+      output.value = "";
+      status.textContent = "Error: " + data.error;
+    }
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  script.onerror = function() {
+    status.textContent = "Could not connect to AI backend.";
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const url =
+    backendUrl +
+    "?callback=" + encodeURIComponent(callbackName) +
+    "&topic=" + encodeURIComponent(topic) +
+    "&language=" + encodeURIComponent(language) +
+    "&length=" + encodeURIComponent(length);
+
+  script.src = url;
+
+  document.body.appendChild(script);
 }
 
 </script>
